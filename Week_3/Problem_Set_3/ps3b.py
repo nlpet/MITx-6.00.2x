@@ -306,6 +306,20 @@ class ResistantVirus(SimpleVirus):
         otherwise.
         """
         return self.getResistances().get(drug,False)
+        
+        
+    def isResistantToAll(self, drugs):
+        """
+        Check whether virus is resistant to all drugs prescribed to the
+        patient. Called by TreatedPatient.getResistPop
+        
+        drugs : List of drugs
+        returns : True if virus is resistant to all drugs, False otherwise
+        """
+        for drug in drugs:
+          if not self.isResistantTo(drug):
+            return False
+        return True
 
         
 
@@ -399,9 +413,25 @@ class TreatedPatient(Patient):
 
         maxPop: The  maximum virus population for this patient (an integer)
         """
+        Patient.__init__(self, viruses, maxPop)
+        self.popDensity = self.getPopDensity(self.getTotalPop())
+        self.prescriptions = []
+        
+        
+    def getPopDensity(self, totalPopulation):
+        """
+        Returns the population density for the patient
+        float : total population / max population
+        """
+        return float(totalPopulation) / float(self.getMaxPop())
 
-        # TODO
-
+        
+    def getMaxPop(self):
+        """
+        Returns the max population.
+        """
+        return self.maxPop
+        
 
     def addPrescription(self, newDrug):
         """
@@ -413,8 +443,9 @@ class TreatedPatient(Patient):
 
         postcondition: The list of drugs being administered to a patient is updated
         """
-
-        # TODO
+        if not newDrug in self.prescriptions:
+          self.prescriptions.append(newDrug)
+          
 
 
     def getPrescriptions(self):
@@ -424,8 +455,8 @@ class TreatedPatient(Patient):
         returns: The list of drug names (strings) being administered to this
         patient.
         """
-
-        # TODO
+        return self.prescriptions
+        
 
 
     def getResistPop(self, drugResist):
@@ -439,8 +470,14 @@ class TreatedPatient(Patient):
         returns: The population of viruses (an integer) with resistances to all
         drugs in the drugResist list.
         """
-
-        # TODO
+        population = 0
+        
+        for virus in self.viruses:
+          if virus.isResistantToAll(drugResist):
+            population += 1
+            
+        return population
+          
 
 
     def update(self):
@@ -464,7 +501,20 @@ class TreatedPatient(Patient):
         integer)
         """
 
-        # TODO
+        currentViruses = self.viruses[:]
+        
+        for virus in self.viruses:
+          if not virus.doesClear():
+            self.popDensity = self.getPopDensity(len(currentViruses))
+            try:
+              offspring = virus.reproduce(self.popDensity, self.prescriptions)
+              if offspring: currentViruses.append(offspring)
+            except NoChildException: pass
+          else:
+            currentViruses.pop(currentViruses.index(virus))
+          
+        self.viruses = currentViruses
+        return self.getTotalPop()        
 
 
 
